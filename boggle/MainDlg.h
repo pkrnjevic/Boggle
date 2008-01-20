@@ -8,6 +8,8 @@ class CMainDlg : public CDialogImpl<CMainDlg>, public CUpdateUI<CMainDlg>,
 		public CMessageFilter, public CIdleHandler
 {
 public:
+	CSimpleHtmlCtrl m_ctrlHTML;
+
 	enum { IDD = IDD_MAINDLG };
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
@@ -48,6 +50,11 @@ public:
 		HICON hIconSmall = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), 
 			IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 		SetIcon(hIconSmall, FALSE);
+
+		// html/rtf subclass
+		m_ctrlHTML.SubclassWindow(GetDlgItem(IDC_RICHEDIT22));
+		m_ctrlHTML.LimitText(10000);
+		m_ctrlHTML.Load(L"html stuff goes here...");
 
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();

@@ -10,6 +10,7 @@
 #include "resource.h"
 
 #include "aboutdlg.h"
+#include "SimpleHtml.h"
 #include "MainDlg.h"
 
 CAppModule _Module;
@@ -47,6 +48,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	::DefWindowProc(NULL, 0, 0, 0L);
 
 	AtlInitCommonControls(ICC_BAR_CLASSES);	// add flags to support other controls
+	HINSTANCE hInstRich = ::LoadLibrary(CRichEditCtrl::GetLibraryName());
 
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
