@@ -3,14 +3,11 @@
 
 #include "stdafx.h"
 
-#include <atlframe.h>
-#include <atlctrls.h>
-#include <atldlgs.h>
-
 #include "resource.h"
 
 #include "aboutdlg.h"
-#include "SimpleHtml.h"
+#include "Board.h"
+#include "Dice.h"
 #include "MainDlg.h"
 
 CAppModule _Module;

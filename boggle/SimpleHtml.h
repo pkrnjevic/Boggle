@@ -88,7 +88,7 @@ public:
       const int SIZE_FACTOR = 2;
       unsigned int nTextSize = _tcslen(pstrHTML);
       unsigned int nSize = nTextSize * SIZE_FACTOR;
-      if( nSize < 1000 ) nSize = 1000;
+      if( nSize < 5000 ) nSize = 5000;
       LPTSTR pstrBuffer = (LPTSTR) malloc( nSize*sizeof(TCHAR) );
       ATLASSERT(pstrBuffer);
 
@@ -774,7 +774,7 @@ public:
       // Forgot to load RTF library?
       ATLASSERT(::GetModuleHandle(CRichEditCtrl::GetLibraryName())!=NULL);
       // Some style that should be set...
-      ATLASSERT(GetStyle() & (ES_MULTILINE|ES_AUTOVSCROLL)==(ES_MULTILINE|ES_AUTOVSCROLL));
+      ATLASSERT((GetStyle() & (ES_MULTILINE|ES_AUTOVSCROLL))==(ES_MULTILINE|ES_AUTOVSCROLL));
       // Default background color
       m_clrBack = ::GetSysColor(COLOR_WINDOW);
       // Turn on word-wrapping...
