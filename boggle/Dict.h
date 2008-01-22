@@ -1,110 +1,110 @@
 #pragma once
 
-//class Dict < Array
-//    def insert(s)
-//        Dict.insert_dict(self,s)
-//    end
-//    def dump
-//#        pp self
-//        Dict.dump_dict(self)
-//    end
-//    # Don't use this! YAWL is better
-//    # process input from ispell 
-//    def build
-//        a = ''
-//        Dir.foreach('dict') do |f|
-//            next if f[0..0] == '.'
-//            a << File.read('dict/'+f)
-//        end
-//        b = a.split
-//        b.map! {|e| e.gsub(/(.*)'./,'\1')}      # get rid of apostrophe 
-//        b.map! {|e| e.gsub(/'/,'')}             # get rid of more apostrophe
-//#        b.map! {|e| e.downcase}
-//        d = []
-//        b.each do |e|
-//            if has_upper(e)
-//                puts "skipping '#{e}' due to capitalization"
-//            else
-//                d << e
-//            end
-//        end
-//        c = d.sort.uniq
-//        File.open(Dictionary,"w") do |f|
-//            c.each {|line| f.puts(line)}
-//        end
-//    end
-//    def load
-//        c = []
-//        # must be a better way - but crlf handling is weird in windows
-//        # tried gets, stripping \n with gsub, substring: all slower
-//        a = File.read(Dictionary)
-//        c = a.split
-//        c.each {|e| self.insert(e)}
-//    end
-//    def load1
-//        a = ''
-//        Dir.foreach('dict') do |f|
-//            next if f[0..0] == '.'
-//            a << File.read('dict/'+f)
-//        end
-//        b = a.split
-//        b.map! {|e| e.gsub(/(.*)'./,'\1')}      # get rid of apostrophe 
-//        b.map! {|e| e.gsub(/'/,'')}             # get rid of more apostrophe 
-//        c = b.sort.uniq
-//        c.each {|e| self.insert(e)}
-//    end
-//    def lookup(ch)
-//        i = Dict.to_n(ch)
-//#        pp ch, i
-//#        p self
-//#        return self
-//        return self[i]
-//    end
-//    def end_of_word?
-//        empty?
-//    end
-//  private
-//    def Dict.insert_dict(dict,s)
-//        return if s.length == 0
-//        i = to_n(s)
-//        if i < 0 || i > 'z'[0]
-//            puts "insert dict error: invalid char val=#{i+'a'[0]}"
-//            puts "debug = '#{s}'"
-//            return
-//        end
-//        dict[i] = Dict.new if !dict[i]
-//        insert_dict(dict[i],s[1..-1])
-//    end
-//    def Dict.dump_dict(dict,s='')
-//        return false if !dict
-//        found = false
-//        ('a'..'z').each do |ch|
-//            i = to_n(ch)
-//            found |= dump_dict(dict[i],s+ch)
-//        end
-//        puts s if !found
-//        return true
-//    end
-//    # convert first char in string to
-//    # integer where 'a'=0, 'b'=1, etc
-//    def Dict.to_n(ch)
-//        ch[0]-'a'[0]
-//    end
-//    def Dict.to_ch(n)
-//        ('a'+n).chr
-//    end
-//end
+#include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <string>
 
+class CDict;
+typedef CDict* CDictPtr;
 
-class CDict
+class CDict : public std::vector<CDictPtr>
 {
 public:
-
 	CDict(void)
 	{
+		this->resize('z'-'a'+1,0);
 	}
 
 	~CDict(void)
 	{
+	}
+	void Load(const std::wstring fn)
+	{
+		std::wstring line;
+
+		std::wifstream myfile(fn.c_str());
+		if (!myfile.is_open())
+		{
+			std::cout << "Unable to open file";
+			return;
+		}
+		while (!myfile.eof()) {
+			std::getline(myfile,line);
+//			std::wcout << line << std::endl;
+			Insert(line);
+		}
+	}
+	bool EndOfWord()
+	{
+		return end() == std::find_if(begin(),end(),CDict::notEmpty);
+	}
+	CDictPtr Insert(std::wstring s)
+	{
+		return CDict::insert(this,s);
+	}
+	void Dump()
+	{
+		std::wstring s;
+		CDict::dump(this,s);
+	}
+	CDictPtr Lookup(wchar_t ch)
+	{
+		int i = CDict::to_n(ch);
+		return (*this)[i];
+	}
+private:
+	static bool notEmpty(CDictPtr dict)
+	{
+		return 0 != dict;
+	}
+	static CDictPtr insert(CDictPtr dict, std::wstring s)
+	{
+		if (s.empty()) return 0;
+		int i = to_n(s);
+		if (i < 0 || i > 'z'-'a') 
+		{
+			std::wstring s = L"Invalid input in wordlist: " + s;
+			OutputDebugString(s.c_str());
+			return 0;
+		}
+		if (!(*dict)[i]) 
+		{
+			(*dict)[i] = new CDict();
+		}
+		std::wstring s1 = s.substr(1,s.length());
+		return insert((*dict)[i],s1);
+	}
+	static bool dump(CDictPtr dict,std::wstring s)
+	{
+		if (!dict) return false;
+		bool found = false;
+		for (wchar_t ch='a'; ch<='z'; ch++)
+		{
+			int i = to_n(ch);
+			std::wstring s1;
+			s1.append(1,ch);
+			found |= dump((*dict)[i], s+s1);
+		}
+		if (!found) {
+			OutputDebugString(s.c_str());
+			OutputDebugString(L"\n");
+		}
+		return true;
+	}
+	static int to_n(wchar_t ch)
+	{
+		ATLASSERT(ch >= 'a' && ch <= 'z');
+		return ch - 'a';
+	}
+	static int to_n(const std::wstring s)
+	{
+		return to_n(s[0]);
+	}
+	static wchar_t to_ch(int n)
+	{
+		wchar_t ch = n + 'a';
+		ATLASSERT(ch >= 'a' && ch <= 'z');
+		return ch;
 	}
 };

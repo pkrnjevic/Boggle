@@ -13,6 +13,8 @@ public:
 	CSimpleHtmlCtrl m_ctrlHTML;
 	CBoard m_board;
 	CDice m_dice;
+	CDict m_dict;
+	CVisitList m_visitlist;
 
 	enum { IDD = IDD_MAINDLG };
 
@@ -36,6 +38,8 @@ public:
 		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
 		COMMAND_HANDLER(IDC_NEW, BN_CLICKED, OnBnClickedNew)
+		COMMAND_HANDLER(IDC_SOLVE, BN_CLICKED, OnBnClickedSolve)
+		COMMAND_HANDLER(IDC_LIST, LBN_SELCHANGE, OnLbnSelchangeList)
 	END_MSG_MAP()
 
 // Handler prototypes (uncomment arguments if needed):
@@ -59,22 +63,34 @@ public:
 		// html/rtf subclass
 		m_ctrlHTML.SubclassWindow(GetDlgItem(IDC_BOARD));
 		m_ctrlHTML.LimitText(10000);
-		WCHAR s[] = L"<TABLE STYLE=\"table-layout:fixed\">" \
-			L"<COL WIDTH=30><COL WIDTH=30><COL WIDTH=30><COL WIDTH=30><COL WIDTH=30>" \
-			L"<TR>" \
-			L"<TD>A</TD><TD>B</TD><TD>C</TD><TD>D</TD><TD>E</TD>" \
-			L"</TR>" \
-			L"<TR HEIGHT=\"100\">" \
-			L"<TD>F</TD><TD>G</TD><TD><strong><FONT COLOR=\"#ff0000\">H</FONT></strong></TD><TD>I</TD><TD>J</TD>" \
-			L"</TR>" \
-			L"<TD>K</TD><TD>L</TD><TD><strong>M</strong></TD><TD>N</TD><TD>O</TD>" \
-			L"</TR>" \
-			L"<TD>P</TD><TD>Q</TD><TD>R</TD><TD>S</TD><TD>T</TD>" \
-			L"</TR>" \
-			L"<TD>U</TD><TD>V</TD><TD>W</TD><TD>X</TD><TD>Y</TD>" \
-			L"</TR>" \
-			L"</TABLE>";
-		m_ctrlHTML.Load(s);
+		
+		//WCHAR s[] = L"<TABLE STYLE=\"table-layout:fixed\">" \
+		//	L"<COL WIDTH=30><COL WIDTH=30><COL WIDTH=30><COL WIDTH=30><COL WIDTH=30>" \
+		//	L"<TR>" \
+		//	L"<TD>A</TD><TD>B</TD><TD>C</TD><TD>D</TD><TD>E</TD>" \
+		//	L"</TR>" \
+		//	L"<TR HEIGHT=\"100\">" \
+		//	L"<TD>F</TD><TD>G</TD><TD><strong><FONT COLOR=\"#ff0000\">H</FONT></strong></TD><TD>I</TD><TD>J</TD>" \
+		//	L"</TR>" \
+		//	L"<TD>K</TD><TD>L</TD><TD><strong>M</strong></TD><TD>N</TD><TD>O</TD>" \
+		//	L"</TR>" \
+		//	L"<TD>P</TD><TD>Q</TD><TD>R</TD><TD>S</TD><TD>T</TD>" \
+		//	L"</TR>" \
+		//	L"<TD>U</TD><TD>V</TD><TD>W</TD><TD>X</TD><TD>Y</TD>" \
+		//	L"</TR>" \
+		//	L"</TABLE>";
+		//m_ctrlHTML.Load(s);
+
+		//m_dict.Insert(L"peter");
+		//m_dict.Insert(L"is");
+		//m_dict.Insert(L"a");
+		//m_dict.Insert(L"pretty");
+		//m_dict.Insert(L"clever");
+		//m_dict.Insert(L"fellow");
+		//m_dict.Dump();
+
+		// Load dictionary
+		m_dict.Load(L"word.list");
 
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -83,6 +99,8 @@ public:
 		pLoop->AddIdleHandler(this);
 
 		UIAddChildWindowContainer(m_hWnd);
+
+		CButton(GetDlgItem(IDC_NEW)).Click();
 
 		return TRUE;
 	}
@@ -135,14 +153,38 @@ public:
 		os << L"</TABLE>";
 		return os.str();
 	}
-#include <ostream>
 
 	LRESULT OnBnClickedNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		std::wstring s = m_dice.RollDice();
 		OutputDebugString(s.c_str());
 		OutputDebugString(L"\n");
-		this->m_ctrlHTML.Load(FormatBoard(s).c_str());
+		m_board.Load(s);
+		m_ctrlHTML.Load(m_board.Format().c_str());
+		BOOL not_used;
+		OnBnClickedSolve(0, 0, 0, not_used);
+		return 0;
+	}
+	
+	LRESULT OnBnClickedSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_visitlist.clear();
+		for (int i=0; i<BoardSize; i++)
+			m_board.Walk(i, &m_dict, m_visitlist);
+		CListBox lb(GetDlgItem(IDC_LIST));
+		while (lb.DeleteString(0) != LB_ERR)
+			;
+		for (CVisitList::iterator i=m_visitlist.begin(); i!=m_visitlist.end(); i++)
+			lb.AddString(m_board.Entries(*i).c_str());
+		return 0;
+	}
+		
+	LRESULT OnLbnSelchangeList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+	{
+		int i = CListBox(hWndCtl).GetCurSel();
+		m_ctrlHTML.Load(m_board.Format(-1,&m_visitlist[i]).c_str());
+//		OutputDebugString(m_board.Entries(m_visitlist[i]).c_str());
+//		OutputDebugString(L"\n");
 		return 0;
 	}
 
@@ -151,4 +193,5 @@ public:
 		DestroyWindow();
 		::PostQuitMessage(nVal);
 	}
+
 };

@@ -26,6 +26,8 @@ extern CAppModule _Module;
 #include <time.h>
 #include <string>
 #include <sstream>
+#include <vector>
+#include <deque>
 
 #include "SimpleHtml.h"
 
