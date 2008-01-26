@@ -21,9 +21,9 @@ public:
 	}
 	void Load(const std::wstring fn)
 	{
-		std::wstring line;
+		std::string line;
 
-		std::wifstream myfile(fn.c_str());
+		std::ifstream myfile(CW2A(fn.c_str()));
 		if (!myfile.is_open())
 		{
 			std::cout << "Unable to open file";
@@ -32,16 +32,16 @@ public:
 		while (!myfile.eof()) {
 			std::getline(myfile,line);
 //			std::wcout << line << std::endl;
-			Insert(line);
+			Insert(line.c_str());
 		}
 	}
 	bool EndOfWord()
 	{
 		return end() == std::find_if(begin(),end(),CDict::notEmpty);
 	}
-	CDictPtr Insert(std::wstring s)
+	CDictPtr Insert(std::string s)
 	{
-		return CDict::insert(this,s);
+		return CDict::insert(this,s.c_str());
 	}
 	void Dump()
 	{
@@ -58,10 +58,10 @@ private:
 	{
 		return 0 != dict;
 	}
-	static CDictPtr insert(CDictPtr dict, std::wstring s)
+	static CDictPtr insert(CDictPtr dict, const char* ps)
 	{
-		if (s.empty()) return 0;
-		int i = to_n(s);
+		if (!ps || !*ps) return 0;
+		int i = to_n(*ps);
 		if (i < 0 || i > 'z'-'a') 
 		{
 			std::wstring s = L"Invalid input in wordlist: " + s;
@@ -72,8 +72,7 @@ private:
 		{
 			(*dict)[i] = new CDict();
 		}
-		std::wstring s1 = s.substr(1,s.length());
-		return insert((*dict)[i],s1);
+		return insert((*dict)[i],++ps);
 	}
 	static bool dump(CDictPtr dict,std::wstring s)
 	{
@@ -92,7 +91,7 @@ private:
 		}
 		return true;
 	}
-	static int to_n(wchar_t ch)
+	static int to_n(char ch)
 	{
 		ATLASSERT(ch >= 'a' && ch <= 'z');
 		return ch - 'a';
