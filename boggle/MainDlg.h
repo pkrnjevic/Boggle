@@ -10,7 +10,9 @@ class CMainDlg : public CDialogImpl<CMainDlg>, public CDialogResize<CMainDlg>,
 		public CUpdateUI<CMainDlg>,	public CMessageFilter, public CIdleHandler
 {
 public:
-	CSimpleHtmlCtrl m_ctrlHTML;
+//	CSimpleHtmlCtrl m_ctrlHTML;
+	CBoardView m_boardview;
+	CFont m_font;
 	CBoard m_board;
 	CDice m_dice;
 	CDict m_dict;
@@ -32,7 +34,8 @@ public:
 	END_UPDATE_UI_MAP()
 
 	BEGIN_DLGRESIZE_MAP(CMainDlg)
-		DLGRESIZE_CONTROL(IDC_RICHEDIT22, DLSZ_SIZE_X|DLSZ_SIZE_Y)
+//		DLGRESIZE_CONTROL(IDC_RICHEDIT22, DLSZ_SIZE_X|DLSZ_SIZE_Y)
+		DLGRESIZE_CONTROL(IDC_BOARD, DLSZ_SIZE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_LIST, DLSZ_MOVE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_NEW, DLSZ_MOVE_Y)
 		DLGRESIZE_CONTROL(IDC_SOLVE, DLSZ_MOVE_Y)
@@ -42,6 +45,9 @@ public:
 	BEGIN_MSG_MAP(CMainDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+//		MSG_WM_ERASEBKGND(OnEraseBkgnd)
+		MSG_WM_SIZE(OnSize)
+        MSG_WM_DRAWITEM(OnDrawItem)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
@@ -71,9 +77,14 @@ public:
 			IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 		SetIcon(hIconSmall, FALSE);
 
-		// html/rtf subclass
-		m_ctrlHTML.SubclassWindow(GetDlgItem(IDC_BOARD));
-		m_ctrlHTML.LimitText(10000);
+//		// html/rtf subclass
+//		m_ctrlHTML.SubclassWindow(GetDlgItem(IDC_BOARD));
+//		m_ctrlHTML.LimitText(10000);
+
+		// Set up the owner-draw static control
+		m_boardview.Attach ( GetDlgItem(IDC_BOARD) );
+		m_boardview.ModifyStyle ( SS_TYPEMASK, SS_OWNERDRAW );
+		m_boardview.Init();
 		
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -129,6 +140,31 @@ public:
 		return 0;
 	}
 
+	void OnDrawItem ( UINT uID, LPDRAWITEMSTRUCT lpdis )
+	{
+		if ( IDC_BOARD != uID || ODT_STATIC != lpdis->CtlType )
+		{
+			SetMsgHandled(false);
+			return;
+		}
+
+		CDCHandle dc = lpdis->hDC;
+		const CRect rcCtrl = lpdis->rcItem;
+		m_boardview.Draw(dc,rcCtrl);
+	}
+
+	BOOL OnEraseBkgnd(CDCHandle dc)
+	{
+		SetMsgHandled(false);
+		return FALSE;
+	}
+
+	void OnSize(UINT nType, CSize size)
+	{
+		SetMsgHandled(false);
+		m_boardview.OnSize(nType, size);
+	}
+
 	LRESULT OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		CAboutDlg dlg;
@@ -154,12 +190,12 @@ public:
 		std::wstring::iterator stor = s.begin();
 		std::wostringstream os;
 		os << L"<TABLE STYLE=\"table-layout:fixed\">";
-		for (int i=0; i<Width; i++)
+		for (int i=0; i<BoardWidth; i++)
 			os << L"<COL WIDTH=30>";
-		for (int j=0; j<Width; j++)
+		for (int j=0; j<BoardWidth; j++)
 		{
 			os << L"<TR>";
-			for (int i=0; i<Width; i++)
+			for (int i=0; i<BoardWidth; i++)
 				os << L"<TD>" << char(*stor++ - 'a'+'A') << L"</TD>";
 			os << L"</TR>";
 		}
@@ -173,7 +209,7 @@ public:
 		OutputDebugString(s.c_str());
 		OutputDebugString(L"\n");
 		m_board.Load(s);
-		m_ctrlHTML.Load(m_board.Format().c_str());
+		m_boardview.SetWindowTextW(m_board.Format().c_str());
 		BOOL not_used;
 		OnBnClickedSolve(0, 0, 0, not_used);
 		return 0;
@@ -195,7 +231,7 @@ public:
 	LRESULT OnLbnSelchangeList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 	{
 		int i = CListBox(hWndCtl).GetCurSel();
-		m_ctrlHTML.Load(m_board.Format(-1,&m_visitlist[i]).c_str());
+		m_boardview.SetWindowTextW(m_board.Format(-1,&m_visitlist[i]).c_str());
 //		OutputDebugString(m_board.Entries(m_visitlist[i]).c_str());
 //		OutputDebugString(L"\n");
 		return 0;

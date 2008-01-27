@@ -6,12 +6,20 @@
 #pragma once
 
 // Change these values to use different versions
-#define WINVER		0x0500
-#define _WIN32_WINNT	0x0501
-#define _WIN32_IE	0x0501
+//#define WINVER		0x0500
+//#define _WIN32_WINNT	0x0501
+//#define _WIN32_IE	0x0501
+//#define _RICHEDIT_VER	0x0200
+#define WINVER		    0x0600
+#define _WIN32_WINNT	0x0600
+#define _WIN32_IE	    0x0700
 #define _RICHEDIT_VER	0x0200
+#define _WTL_NO_WTYPES      // WTL shouldn't define CRect/CPoint/CSize
+#define _WTL_NO_CSTRING     // WTL shouldn't define CString
 
 #include <atlbase.h>
+#include <atlstr.h>     // shared CString
+#include <atltypes.h>   // shared CRect/CPoint/CSize
 #include <atlapp.h>
 
 extern CAppModule _Module;
@@ -22,6 +30,7 @@ extern CAppModule _Module;
 #include <atlframe.h>
 #include <atlctrls.h>
 #include <atldlgs.h>
+#include <atlcrack.h>
 
 #include <time.h>
 #include <string>
