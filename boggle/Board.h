@@ -2,6 +2,7 @@
 
 #define __BOARD_H__
 
+#include <boost/smart_enum.hpp>
 #include <ostream>
 #include <list>
 
@@ -14,6 +15,9 @@ typedef std::deque<CVisited> CVisitList;
 static const int neighbour_list[8] = 
 	{-(BoardWidth+1),-BoardWidth,-(BoardWidth-1),-1,1,(BoardWidth-1),BoardWidth,(BoardWidth+1)};
 
+enum direction { northwest, north, northeast, west, east, southwest, south, southeast, none };
+typedef  boost::sequential_smart_enum<direction,northwest,none> Direction;
+
 class CIndex
 {
 	int m_n;
@@ -22,39 +26,57 @@ public:
 	{
 		m_n = n;
 	}
-	std::pair<int,int> toXY(int n)
-	{
-		int x = n % BoardWidth;
-		int y = n / BoardWidth;
-		return std::pair<int,int>(x,y);
-	}
 	bool isValid(int n)
 	{
 		return n >= 0 && n < BoardSize;
 	}
-	int GetNeighbour(int n)
+	bool isNeighbour(int n)
 	{
-		ATLASSERT(n >= 0 && n < 8);
-		int x = m_n % BoardWidth;
-		switch (neighbour_list[n]) {
-		case -(BoardWidth+1):
-		case -1:
-		case BoardWidth-1:
-			if (!x) return -1;
-			break;
-		case -(BoardWidth-1):
-		case 1:
-		case BoardWidth+1:
-			if (x == BoardWidth-1) return -1;
-			break;
-		};
-		int neighbour = m_n + neighbour_list[n];
-		if (isValid(neighbour))
-			return neighbour;
-		else
-			return -1;
+		if (!isValid(n)) return false;
+		CPoint xy(toXY(m_n));
+		CPoint nxy(toXY(n));
+		CPoint diff(nxy-xy);
+		return isNeighbour(diff);
 	}
-
+	Direction GetNeighbourIndex(int n)
+	{
+		CPoint xy(toXY(m_n));
+		CPoint nxy(toXY(n));
+		CPoint diff(nxy-xy);
+		return GetNeighbourIndex(diff);
+	}
+	int GetNeighbour(Direction dir)
+	{
+//		ATLASSERT(n >= 0 && n < 9);
+//		ATLASSERT(n);
+		int neighbour = m_n + neighbour_list[dir];
+		return isNeighbour(neighbour) ? neighbour : -1;
+	}
+private:
+	CPoint toXY(int n)
+	{
+		int x = n % BoardWidth;
+		int y = n / BoardWidth;
+		return CPoint(x,y);
+	}
+	bool isNeighbour(CPoint xy)
+	{
+		if (xy.x < -1 || xy.x > 1) return false;
+		if (xy.y < -1 || xy.y > 1) return false;
+		if (xy.x == 0 && xy.y == 0) return false;
+		return true;
+	}
+	Direction GetNeighbourIndex(CPoint xy)
+	{
+		Direction rv(direction::none);
+		if (!isNeighbour(xy)) return rv;
+		if (xy.y < 0) rv = direction::north + xy.x;
+		else if (xy.y == 0 && xy.x == -1) rv = direction::west;
+		else if (xy.y == 0 && xy.x == 1) rv = direction::east;
+		else if (xy.y > 0) rv = direction::south + xy.x;
+		else rv = none;
+		return rv;
+	}
 };
 
 class CBoard : public std::wstring
@@ -164,9 +186,9 @@ public:
 			return false;
 		}
 		CIndex index(j);
-		for (int i=0; i<8; i++)
+		for (Direction dir=northwest; dir!=none; dir++)
 		{
-			int n = index.GetNeighbour(i);
+			int n = index.GetNeighbour(dir);
 			if (n != -1)
 				print = Walk(n,dict,visitlist,visited,print);
 		}
@@ -175,133 +197,5 @@ public:
 
 	~CBoard(void)
 	{
-	}
-};
-
-
-class CBoardView : public CStatic
-{
-public:
-	CFont m_font;
-	CBoardView() : m_font(0)
-	{
-	}
-	void Init()
-	{
-		CSize size(0,0);
-		this->OnSize(0,size);
-	}
-
-	void OnSize(UINT nType, CSize /*size*/)
-	{
-		if (!m_hWnd)
-			return;
-
-		// Determine what font to use for the text.
-		LOGFONT lf = {0};
-		//			if ( !IsThemeNull() )
-		//				GetThemeSysFont ( TMT_MSGBOXFONT, &lf );
-		//			else
-		{
-			NONCLIENTMETRICS ncm = { sizeof(NONCLIENTMETRICS) };
-
-			SystemParametersInfo ( SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, false );
-			lf = ncm.lfMessageFont;
-		} 
-
-		//			lf.lfHeight = -nPos;
-		if (m_font)
-			m_font.DeleteObject();
-		CRect rc;
-		this->GetClientRect(rc);
-		lf.lfHeight = rc.Height() / 7;
-//		lf.lfWidth = rc.Width() / 7;
-		m_font.CreateFontIndirect ( &lf ); 		
-		//			this->Invalidate(false);
-	}
-
-	void DrawChar(CDCHandle dc, const CRect& rc, char ch)
-	{
-		const UINT uFormat = DT_CENTER|DT_VCENTER|DT_NOPREFIX;
-		wchar_t s[2]=L"";
-		s[0] = ch;
-		dc.FrameRect(rc,(HBRUSH)::GetStockObject(BLACK_BRUSH));
-		dc.DrawText ( CT2CW(s), -1, const_cast<CRect&>(rc), uFormat );
-	}
-
-	void Draw(CDCHandle dc, const CRect& rcCtrl)
-	{
-		CString sText;
-
-		this->GetWindowTextW( sText );
-
-		//if ( IsCompositionEnabled() )
-		//{
-		//	// Set up a memory DC where we'll draw the text.
-		//	CDC dcMem;
-
-		//	dcMem.CreateCompatibleDC ( dc );
-		//	dcMem.SaveDC();
-
-		//	// Create a 32-bit bmp for use in offscreen drawing when glass is on
-		//	BITMAPINFO dib = {0};
-		//	CBitmap bmp;
-
-		//	dib.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		//	dib.bmiHeader.biWidth = rcCtrl.Width();
-		//	dib.bmiHeader.biHeight = -rcCtrl.Height();  // negative because DrawThemeTextEx() uses a top-down DIB
-		//	dib.bmiHeader.biPlanes = 1;
-		//	dib.bmiHeader.biBitCount = 32;
-		//	dib.bmiHeader.biCompression = BI_RGB;
-
-		//	bmp.CreateDIBSection ( dc, &dib, DIB_RGB_COLORS, NULL, NULL, 0 );
-
-		//	// Set up the DC state.
-		//	DTTOPTS dto = { sizeof(DTTOPTS) };
-
-		//	dto.dwFlags = DTT_COMPOSITED|DTT_GLOWSIZE;
-		//	dto.iGlowSize = 10;
-
-		//	dcMem.SelectBitmap ( bmp );
-		//	dcMem.SelectFont ( m_font );
-
-		//	DrawThemeTextEx ( dcMem, 0, 0, CT2CW(sText), -1, uFormat, rcCtrl, &dto );
-
-		//	dc.BitBlt ( rcCtrl.left, rcCtrl.top, rcCtrl.Width(), rcCtrl.Height(), dcMem, 0, 0, SRCCOPY );
-
-		//	dcMem.RestoreDC(-1);
-		//}
-		//else
-		//{
-			ATLASSERT(BoardSize == sText.GetLength());
-			dc.SaveDC();
-
-			dc.FillSolidRect ( rcCtrl, GetSysColor(COLOR_3DFACE) );
-
-			dc.SetBkMode ( TRANSPARENT );
-			dc.SetTextColor ( GetSysColor(COLOR_WINDOWTEXT) );
-			dc.SelectFont ( m_font );
-
-			int xorg = rcCtrl.left;
-			int yorg = rcCtrl.top;
-			int width = rcCtrl.Width();
-			int height = rcCtrl.Height();
-			int i = 0;
-			for (int y=0; y<BoardWidth; y++) 
-			{
-				int top = yorg + height * y / BoardWidth;
-				int bottom = yorg + height * (y+1) / BoardWidth;
-				for (int x=0; x<BoardWidth; x++,i++)
-				{
-					int left = xorg + width * x / BoardWidth;
-					int right = xorg + width * (x+1) / BoardWidth;
-					CRect rc(left,top,right,bottom);
-					DrawChar(dc, rc, sText[i]);
-				}
-			}
-//			dc.DrawText ( CT2CW(sText), -1, const_cast<CRect&>(rcCtrl), uFormat );
-
-			dc.RestoreDC(-1);
-//		}
 	}
 };

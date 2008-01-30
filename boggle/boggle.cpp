@@ -8,6 +8,7 @@
 #include "aboutdlg.h"
 #include "Dict.h"
 #include "Board.h"
+#include "BoardView.h"
 #include "Dice.h"
 #include "MainDlg.h"
 

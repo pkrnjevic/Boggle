@@ -10,15 +10,16 @@ class CMainDlg : public CDialogImpl<CMainDlg>, public CDialogResize<CMainDlg>,
 		public CUpdateUI<CMainDlg>,	public CMessageFilter, public CIdleHandler
 {
 public:
-//	CSimpleHtmlCtrl m_ctrlHTML;
-	CBoardView m_boardview;
-	CFont m_font;
 	CBoard m_board;
+	CBoardViewCtrl m_boardview;
+	CFont m_font;
 	CDice m_dice;
 	CDict m_dict;
 	CVisitList m_visitlist;
 
 	enum { IDD = IDD_MAINDLG };
+
+	CMainDlg() : m_boardview(&m_board,&m_visitlist) {}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
 	{
@@ -45,9 +46,7 @@ public:
 	BEGIN_MSG_MAP(CMainDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
-//		MSG_WM_ERASEBKGND(OnEraseBkgnd)
-		MSG_WM_SIZE(OnSize)
-        MSG_WM_DRAWITEM(OnDrawItem)
+		MESSAGE_HANDLER(WM_DRAWITEM, OnDrawItem)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
@@ -82,9 +81,7 @@ public:
 //		m_ctrlHTML.LimitText(10000);
 
 		// Set up the owner-draw static control
-		m_boardview.Attach ( GetDlgItem(IDC_BOARD) );
-		m_boardview.ModifyStyle ( SS_TYPEMASK, SS_OWNERDRAW );
-		m_boardview.Init();
+		m_boardview.SubclassWindow( GetDlgItem(IDC_BOARD) );
 		
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -140,29 +137,10 @@ public:
 		return 0;
 	}
 
-	void OnDrawItem ( UINT uID, LPDRAWITEMSTRUCT lpdis )
+	LRESULT OnDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-		if ( IDC_BOARD != uID || ODT_STATIC != lpdis->CtlType )
-		{
-			SetMsgHandled(false);
-			return;
-		}
-
-		CDCHandle dc = lpdis->hDC;
-		const CRect rcCtrl = lpdis->rcItem;
-		m_boardview.Draw(dc,rcCtrl);
-	}
-
-	BOOL OnEraseBkgnd(CDCHandle dc)
-	{
-		SetMsgHandled(false);
-		return FALSE;
-	}
-
-	void OnSize(UINT nType, CSize size)
-	{
-		SetMsgHandled(false);
-		m_boardview.OnSize(nType, size);
+		this->m_boardview.Invalidate();
+		return 0;
 	}
 
 	LRESULT OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -209,7 +187,7 @@ public:
 		OutputDebugString(s.c_str());
 		OutputDebugString(L"\n");
 		m_board.Load(s);
-		m_boardview.SetWindowTextW(m_board.Format().c_str());
+		m_boardview.Update();
 		BOOL not_used;
 		OnBnClickedSolve(0, 0, 0, not_used);
 		return 0;
@@ -217,12 +195,13 @@ public:
 	
 	LRESULT OnBnClickedSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		m_visitlist.clear();
-		for (int i=0; i<BoardSize; i++)
-			m_board.Walk(i, &m_dict, m_visitlist);
 		CListBox lb(GetDlgItem(IDC_LIST));
 		while (lb.DeleteString(0) != LB_ERR)
 			;
+		m_visitlist.clear();
+		for (int i=0; i<BoardSize; i++)
+			m_board.Walk(i, &m_dict, m_visitlist);
+
 		for (CVisitList::iterator i=m_visitlist.begin(); i!=m_visitlist.end(); i++)
 			lb.AddString(m_board.Entries(*i).c_str());
 		return 0;
@@ -231,7 +210,7 @@ public:
 	LRESULT OnLbnSelchangeList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 	{
 		int i = CListBox(hWndCtl).GetCurSel();
-		m_boardview.SetWindowTextW(m_board.Format(-1,&m_visitlist[i]).c_str());
+		m_boardview.Update(i);
 //		OutputDebugString(m_board.Entries(m_visitlist[i]).c_str());
 //		OutputDebugString(L"\n");
 		return 0;
