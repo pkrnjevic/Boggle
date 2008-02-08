@@ -3,14 +3,12 @@
 #define __BOARD_H__
 
 #include <boost/smart_enum.hpp>
+#include <boost/bind.hpp>
 #include <ostream>
 #include <list>
 
 #define BoardWidth 5
 #define BoardSize (BoardWidth*BoardWidth)
-
-typedef std::list<int> CVisited;
-typedef std::deque<CVisited> CVisitList;
 
 static const int neighbour_list[8] = 
 	{-(BoardWidth+1),-BoardWidth,-(BoardWidth-1),-1,1,(BoardWidth-1),BoardWidth,(BoardWidth+1)};
@@ -79,38 +77,47 @@ private:
 	}
 };
 
-class CBoard : public std::wstring
+class CBoard
 {
+	 std::wstring m_letters;
+	 CWordList m_wordlist;
+	 CDict& m_dict;
+	 int m_selection;
+
 public:
 
-	CBoard(void)
+	CBoard(CDict::Ptr pd) : m_dict(*pd), m_selection(-1)
 	{
-		this->reserve(BoardSize);
+		m_letters.resize(BoardSize);
+	}
+
+	~CBoard(void)
+	{
 	}
 
 	void Load(std::wstring s)
 	{
 		//std::wstring& rs = this;
 		//rs = s;
-		this->assign(s);
+		m_letters.assign(s);
 	}
 
-	std::wstring Entries(CVisited v)
+	std::wstring Entries(CWord v)
 	{
 		std::wstring s;
-		for (CVisited::iterator i=v.begin(); i!=v.end(); i++)
+		for (CWord::iterator i=v.begin(); i!=v.end(); i++)
 		{
-			s.append(1,(*this)[*i]);
+			s.append(1,m_letters[*i]);
 		}
 		return s;
 	}
-	std::wstring Format(int row = -1, CVisited* visited=NULL)
+	std::wstring Format(int row = -1)
 	{
 		std::wostringstream os;
 		if (row == -1)
 		{
-			for (int i=0; i<BoardWidth; i++)
-				os << this->Format(i,visited);         // << std::endl;
+			for (int row=0; row<BoardWidth; row++)
+				os << this->Format(row);		// << std::endl;
 		}
 		else
 		{
@@ -118,69 +125,66 @@ public:
 			int j = row * BoardWidth;
 			for (int i=0; i<BoardWidth; i++)
 			{
-				bool highlight = visited == NULL ? false : 
-					visited->end() != std::find(visited->begin(),visited->end(),j);
-				if (highlight)
-					os << char((*this)[j++] - 'a'+'A');
-				else
-					os << char((*this)[j++] - 'a'+'A');
+//				std::find(word.begin(),word.end(),j);
+				os << char(m_letters[j++] - 'a'+'A');
 			}
-		}
-		return os.str();
-	}
-	std::wstring FormatHTML(int row = -1, CVisited* visited=NULL)
-	{
-		std::wostringstream os;
-		if (row == -1)
-		{
-			os << L"<TABLE STYLE=\"table-layout:fixed\">";
-			for (int i=0; i<BoardWidth; i++)
-				os << L"<COL WIDTH=30>";
-			for (int i=0; i<BoardWidth; i++)
-				os << this->Format(i,visited);
-			os << L"</TABLE>";
-		}
-		else
-		{
-			ATLASSERT(row >= 0 && row < BoardWidth);
-			int j = row * BoardWidth;
-			os << L"<TR>";
-			for (int i=0; i<BoardWidth; i++)
-			{
-				bool highlight = visited == NULL ? false : 
-					visited->end() != std::find(visited->begin(),visited->end(),j);
-				if (highlight)
-					os << L"<TD><B><font color=\"#ff0000\">" << char((*this)[j++] - 'a'+'A') << L"</font></B></TD>";
-				else
-					os << L"<TD>" << char((*this)[j++] - 'a'+'A') << L"</TD>";
-			}
-			os << L"</TR>";
 		}
 		return os.str();
 	}
 
-	bool Walk(int j, CDictPtr dict, CVisitList& visitlist, 
-		CVisited visited=*(std::auto_ptr<CVisited>(new CVisited)), bool print=false)
+	//std::wstring FormatHTML(int row = -1, CWord* word=NULL)
+	//{
+	//	std::wostringstream os;
+	//	if (row == -1)
+	//	{
+	//		os << L"<TABLE STYLE=\"table-layout:fixed\">";
+	//		for (int i=0; i<BoardWidth; i++)
+	//			os << L"<COL WIDTH=30>";
+	//		for (int i=0; i<BoardWidth; i++)
+	//			os << this->Format(i);
+	//		os << L"</TABLE>";
+	//	}
+	//	else
+	//	{
+	//		ATLASSERT(row >= 0 && row < BoardWidth);
+	//		int j = row * BoardWidth;
+	//		os << L"<TR>";
+	//		for (int i=0; i<BoardWidth; i++)
+	//		{
+	//			bool highlight = word == NULL ? false : 
+	//				word->end() != std::find(word->begin(),word->end(),j);
+	//			if (highlight)
+	//				os << L"<TD><B><font color=\"#ff0000\">" << char(m_letters[j++] - 'a'+'A') << L"</font></B></TD>";
+	//			else
+	//				os << L"<TD>" << char(m_letters[j++] - 'a'+'A') << L"</TD>";
+	//		}
+	//		os << L"</TR>";
+	//	}
+	//	return os.str();
+	//}
+
+	bool Walk(int j, CDict::Ptr dict, CWordList& wordlist, 
+		CWord word=*(std::auto_ptr<CWord>(new CWord)), bool print=false)
 	{
 		if (!dict) return false;
-		if (visited.end() != std::find(visited.begin(),visited.end(),j)) 
+		if (word.end() != std::find(word.begin(),word.end(),j)) 
 		{
 			// print?
 			return false;
 		}
-		dict = dict->Lookup((*this)[j]);
+		dict = dict->Lookup(m_letters[j]);
 		if (!dict) 
 		{
 			// print?
 			return false;
 		}
-		visited.push_back(j);
+		word.push_back(j);
 		if (dict->EndOfWord())
 		{
-			visitlist.push_back(visited);
+			wordlist.push_back(word);
 		}
 		print = true;
-		if (visited.size() == BoardSize)
+		if (word.size() == BoardSize)
 		{
 			// print?
 			return false;
@@ -190,12 +194,92 @@ public:
 		{
 			int n = index.GetNeighbour(dir);
 			if (n != -1)
-				print = Walk(n,dict,visitlist,visited,print);
+				print = Walk(n,dict,wordlist,word,print);
 		}
 		return print;
 	}
 
-	~CBoard(void)
+	void SetSelection(int item)
 	{
+		ATLASSERT(item >= -1);
+		m_selection = item;
 	}
+
+	int GetSelection()
+	{
+		return m_selection;
+	}
+
+	std::wstring Word2String(const CWord& w)
+	{
+		std::wstring s;
+		CWord::const_iterator i;
+		for (i=w.begin(); i!=w.end(); i++)
+			s += this->m_letters[*i];
+		return s;
+	}
+
+	bool Lookup(const std::wstring s)
+	{
+		return m_dict.Lookup(s);
+	}
+
+	const CWordList& Solve()
+	{
+	 	m_wordlist.clear();
+		for (int i=0; i<BoardSize; i++)
+			Walk(i, &m_dict, m_wordlist);
+		std::sort(m_wordlist.begin(),m_wordlist.end(),boost::bind(&CBoard::wordCompare,this,_1,_2));
+		return m_wordlist;
+	}
+
+	bool IsSquareUsed(int square)
+	{
+		bool found = false;
+		if (m_selection != -1)
+		{
+			CWord& v = m_wordlist[m_selection];
+			CWord::iterator i = std::find(v.begin(), v.end(), square);
+			found = v.end() != i;
+		}
+		return found;
+	}
+
+	// Get direction to next letter in word
+	Direction GetDirection(int square)
+	{
+		Direction dir = direction::none;
+		bool found = false;
+		if (m_selection != -1)
+		{
+			CWord& v = m_wordlist[m_selection];
+			CWord::iterator i = std::find(v.begin(), v.end(), square);
+			found = v.end() != i;
+			if (found)
+			{
+				CWord::iterator next = ++i;
+				if (next != v.end())
+				{
+					int next_square = *next;
+					CIndex ndx(square);
+					if (ndx.isNeighbour(next_square))
+					{
+						dir = ndx.GetNeighbourIndex(next_square);
+						char s[1000];
+						sprintf(s,"square=%d, next_square=%d, direction=%d\n",square,next_square,dir);
+						OutputDebugStringA(s);
+					}
+				}
+			}
+		}
+		return dir;
+	}
+
+private:
+
+	bool wordCompare( const CWord& a, const CWord& b )
+	{
+		return Word2String(a) < Word2String(b);
+	}
+
 };

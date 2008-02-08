@@ -4,13 +4,15 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <list>
 
-class CDict;
-typedef CDict* CDictPtr;
+typedef std::list<int> CWord;
+typedef std::deque<CWord> CWordList;
 
-class CDict : public std::vector<CDictPtr>
+class CDict : public std::vector<CDict *>
 {
 public:
+	typedef CDict* Ptr;
 	CDict(void)
 	{
 		this->resize('z'-'a'+1,0);
@@ -39,7 +41,7 @@ public:
 	{
 		return end() == std::find_if(begin(),end(),CDict::notEmpty);
 	}
-	CDictPtr Insert(std::string s)
+	CDict::Ptr Insert(std::string s)
 	{
 		return CDict::insert(this,s.c_str());
 	}
@@ -48,17 +50,28 @@ public:
 		std::wstring s;
 		CDict::dump(this,s);
 	}
-	CDictPtr Lookup(wchar_t ch)
+	bool Lookup(const std::wstring& s)
+	{
+		std::wstring::const_iterator i;
+		CDict::Ptr pd = this;
+		for (i=s.begin(); i!=s.end(); i++)
+		{
+			pd = pd->Lookup(*i);
+			if (!pd) return false;
+		}
+		return pd->EndOfWord();
+	}
+	CDict::Ptr Lookup(wchar_t ch)
 	{
 		int i = CDict::to_n(ch);
 		return (*this)[i];
 	}
 private:
-	static bool notEmpty(CDictPtr dict)
+	static bool notEmpty(CDict::Ptr dict)
 	{
 		return 0 != dict;
 	}
-	static CDictPtr insert(CDictPtr dict, const char* ps)
+	static CDict::Ptr insert(CDict::Ptr dict, const char* ps)
 	{
 		if (!ps || !*ps) return 0;
 		int i = to_n(*ps);
@@ -74,7 +87,7 @@ private:
 		}
 		return insert((*dict)[i],++ps);
 	}
-	static bool dump(CDictPtr dict,std::wstring s)
+	static bool dump(CDict::Ptr dict,std::wstring s)
 	{
 		if (!dict) return false;
 		bool found = false;

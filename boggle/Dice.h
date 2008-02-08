@@ -34,8 +34,8 @@ public:
 
 	std::wstring RollDice()
 	{
-		std::wstring dice = L"abcdefghijklmnopqrstuvwxyz";
-		dice.reserve(BoardSize);
+		std::wstring dice;
+		dice.resize(BoardSize);
 
 		// initialize dice
 		for (int i=0; i<BoardSize; i++)

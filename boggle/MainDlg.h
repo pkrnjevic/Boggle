@@ -10,16 +10,17 @@ class CMainDlg : public CDialogImpl<CMainDlg>, public CDialogResize<CMainDlg>,
 		public CUpdateUI<CMainDlg>,	public CMessageFilter, public CIdleHandler
 {
 public:
+	CDict m_dict;
 	CBoard m_board;
 	CBoardViewCtrl m_boardview;
 	CFont m_font;
 	CDice m_dice;
-	CDict m_dict;
-	CVisitList m_visitlist;
 
 	enum { IDD = IDD_MAINDLG };
 
-	CMainDlg() : m_boardview(&m_board,&m_visitlist) {}
+	CMainDlg() : m_board(&m_dict),
+				 m_boardview(&m_board) 
+	{}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
 	{
@@ -47,6 +48,7 @@ public:
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_DRAWITEM, OnDrawItem)
+//		MSG_WM_MOUSEMOVE(OnMouseMove)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
@@ -137,6 +139,11 @@ public:
 		return 0;
 	}
 
+	//void OnMouseMove(UINT nFlags, CPoint point)
+	//{
+	//	m_boardview.MouseLeftClient();
+	//}
+
 	LRESULT OnDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
 		this->m_boardview.Invalidate();
@@ -198,11 +205,8 @@ public:
 		CListBox lb(GetDlgItem(IDC_LIST));
 		while (lb.DeleteString(0) != LB_ERR)
 			;
-		m_visitlist.clear();
-		for (int i=0; i<BoardSize; i++)
-			m_board.Walk(i, &m_dict, m_visitlist);
-
-		for (CVisitList::iterator i=m_visitlist.begin(); i!=m_visitlist.end(); i++)
+		const CWordList& wordlist = m_board.Solve();
+		for (CWordList::const_iterator i=wordlist.begin(); i!=wordlist.end(); i++)
 			lb.AddString(m_board.Entries(*i).c_str());
 		return 0;
 	}
@@ -211,7 +215,7 @@ public:
 	{
 		int i = CListBox(hWndCtl).GetCurSel();
 		m_boardview.Update(i);
-//		OutputDebugString(m_board.Entries(m_visitlist[i]).c_str());
+//		OutputDebugString(m_board.Entries(m_wordlist[i]).c_str());
 //		OutputDebugString(L"\n");
 		return 0;
 	}
