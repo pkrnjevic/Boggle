@@ -9,19 +9,31 @@
 typedef std::list<int> CWord;
 typedef std::deque<CWord> CWordList;
 
-class CDict : public std::vector<CDict *>
+static const int AlphabetSize = 'z'-'a'+1;
+
+class CDict
 {
 public:
 	typedef CDict* Ptr;
+public:
+	Ptr m_dict[AlphabetSize];		// dict loads 3 times faster using array instead of std::vector (& almost no code change)
 	bool m_end_of_word;
+
+public:
 
 	CDict(void) : m_end_of_word(false)
 	{
-		this->resize('z'-'a'+1,0);
+		memset(m_dict,0,sizeof(m_dict));
 	}
 
 	~CDict(void)
 	{
+		// not implemented since dict lives until program shuts down
+	}
+	Ptr& operator[](int n)
+	{
+		ATLASSERT(n>=0 && n<AlphabetSize);
+		return m_dict[n];
 	}
 	void Load(const std::wstring fn)
 	{
@@ -35,7 +47,6 @@ public:
 		}
 		while (!myfile.eof()) {
 			std::getline(myfile,line);
-//			std::wcout << line << std::endl;
 			Insert(line.c_str());
 		}
 	}

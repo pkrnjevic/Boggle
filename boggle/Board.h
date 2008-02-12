@@ -184,7 +184,7 @@ public:
 			s = L"\n";
 			s = Word2String(word);
 			s += L"\n";
-			OutputDebugString(s.c_str());
+//			OutputDebugString(s.c_str());
 			wordlist.push_back(word);
 		}
 
