@@ -5,6 +5,7 @@
 #pragma once
 
 #include "StringUtils.h"
+#include "SplitterBar.h"
 
 class CMainDlg : public CDialogImpl<CMainDlg>, public CDialogResize<CMainDlg>,
 		public CUpdateUI<CMainDlg>,	public CMessageFilter, public CIdleHandler
@@ -15,6 +16,7 @@ public:
 	CBoardViewCtrl m_boardview;
 	CFont m_font;
 	CDice m_dice;
+	CVertSplitterCtrl m_ctrlSplit;
 
 	enum { IDD = IDD_MAINDLG };
 
@@ -36,8 +38,9 @@ public:
 	END_UPDATE_UI_MAP()
 
 	BEGIN_DLGRESIZE_MAP(CMainDlg)
-//		DLGRESIZE_CONTROL(IDC_RICHEDIT22, DLSZ_SIZE_X|DLSZ_SIZE_Y)
+////	DLGRESIZE_CONTROL(IDC_RICHEDIT22, DLSZ_SIZE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_BOARD, DLSZ_SIZE_X|DLSZ_SIZE_Y)
+		DLGRESIZE_CONTROL(IDC_SPLIT, DLSZ_MOVE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_LIST, DLSZ_MOVE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_NEW, DLSZ_MOVE_Y)
 		DLGRESIZE_CONTROL(IDC_SOLVE, DLSZ_MOVE_Y)
@@ -66,6 +69,9 @@ public:
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
 		DlgResize_Init(true, true, WS_THICKFRAME|WS_CLIPCHILDREN);
+
+		m_ctrlSplit.SubclassWindow(GetDlgItem(IDC_SPLIT));
+		m_ctrlSplit.SetSplitterPanes(GetDlgItem(IDC_BOARD), GetDlgItem(IDC_LIST));
 
 		// center the dialog on the screen
 		CenterWindow();
@@ -202,12 +208,16 @@ public:
 	
 	LRESULT OnBnClickedSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		CListBox lb(GetDlgItem(IDC_LIST));
-		while (lb.DeleteString(0) != LB_ERR)
-			;
+		CEdit lb(GetDlgItem(IDC_LIST));
+		lb.Clear();
+//		while (lb.DeleteString(0) != LB_ERR && lb.GetCount())
+//			;
 		const CWordList& wordlist = m_board.Solve();
 		for (CWordList::const_iterator i=wordlist.begin(); i!=wordlist.end(); i++)
-			lb.AddString(m_board.Entries(*i).c_str());
+		{
+			std::wstring s = (i == wordlist.begin() ? L"" : L", ") + m_board.Entries(*i);
+			lb.AppendText(s.c_str());
+		}
 		return 0;
 	}
 		

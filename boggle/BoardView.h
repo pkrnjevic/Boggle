@@ -98,12 +98,14 @@ public:
 	bool m_in_client;
 	CWord m_word;
 	bool m_is_word;
+	ULONGLONG m_mouse_time;		// mouse time (system ticks) in msec
 
 	CBoardViewImpl(CBoard* pb) : m_board(*pb), 
 								 m_font(0),
 								 m_selection(-1),
 								 m_in_client(false),
-								 m_is_word(false)
+								 m_is_word(false),
+								 m_mouse_time(0)
 	{}
 
 	DECLARE_WND_SUPERCLASS(NULL, TBase::GetWndClassName())
@@ -167,6 +169,8 @@ public:
 
 	void OnSize(UINT nType, CSize size)
 	{
+		if (GetCurrentMessage())
+			SetMsgHandled(false);
 		ATLASSERT(m_hWnd);
 
 		// Determine what font to use for the text.
@@ -191,6 +195,7 @@ public:
 //		lf.lfWidth = rc.Width() / 7;
 		m_font.CreateFontIndirect ( &lf ); 		
 		//			this->Invalidate(false);
+		Invalidate();
 	}
 
 	UINT OnNcHitTest(CPoint point)
@@ -213,6 +218,14 @@ public:
 		int square = col + row * BoardWidth;
 		if (square != m_mouse_square && nFlags & MK_LBUTTON)
 		{
+			UINT hover_time;
+			SystemParametersInfo(SPI_GETMOUSEHOVERTIME,0,&hover_time,0);
+			ULONGLONG time = GetTickCount64();
+			if (time - m_mouse_time < hover_time)
+			{
+				m_word.pop_back();
+			}
+			m_mouse_time = time;
 			m_mouse_square = square;
 			m_word.push_back(square);
 			const std::wstring& s = m_board.Word2String(m_word);

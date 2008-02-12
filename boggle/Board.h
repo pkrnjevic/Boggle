@@ -166,29 +166,32 @@ public:
 	bool Walk(int j, CDict::Ptr dict, CWordList& wordlist, 
 		CWord word=*(std::auto_ptr<CWord>(new CWord)), bool print=false)
 	{
-		if (!dict) return false;
-		if (word.end() != std::find(word.begin(),word.end(),j)) 
-		{
-			// print?
+		if (!dict) 
 			return false;
-		}
+
+		// don't allow squares to be used twice
+		if (word.end() != std::find(word.begin(),word.end(),j)) 
+			return false;
+
 		dict = dict->Lookup(m_letters[j]);
 		if (!dict) 
-		{
-			// print?
 			return false;
-		}
+
 		word.push_back(j);
 		if (dict->EndOfWord())
 		{
+			std::wstring s;
+			s = L"\n";
+			s = Word2String(word);
+			s += L"\n";
+			OutputDebugString(s.c_str());
 			wordlist.push_back(word);
 		}
+
 		print = true;
 		if (word.size() == BoardSize)
-		{
-			// print?
 			return false;
-		}
+
 		CIndex index(j);
 		for (Direction dir=northwest; dir!=none; dir++)
 		{

@@ -13,7 +13,9 @@ class CDict : public std::vector<CDict *>
 {
 public:
 	typedef CDict* Ptr;
-	CDict(void)
+	bool m_end_of_word;
+
+	CDict(void) : m_end_of_word(false)
 	{
 		this->resize('z'-'a'+1,0);
 	}
@@ -39,7 +41,7 @@ public:
 	}
 	bool EndOfWord()
 	{
-		return end() == std::find_if(begin(),end(),CDict::notEmpty);
+		return m_end_of_word;
 	}
 	CDict::Ptr Insert(std::string s)
 	{
@@ -67,13 +69,23 @@ public:
 		return (*this)[i];
 	}
 private:
+	void setEndOfWord()
+	{
+		m_end_of_word = true;
+	}
+private:
 	static bool notEmpty(CDict::Ptr dict)
 	{
 		return 0 != dict;
 	}
 	static CDict::Ptr insert(CDict::Ptr dict, const char* ps)
 	{
-		if (!ps || !*ps) return 0;
+		if (!ps || !*ps) 
+		{
+			ATLASSERT(dict);
+			dict->setEndOfWord();
+			return 0;
+		}
 		int i = to_n(*ps);
 		if (i < 0 || i > 'z'-'a') 
 		{
