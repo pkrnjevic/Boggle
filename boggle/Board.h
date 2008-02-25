@@ -92,24 +92,28 @@ private:
 	}
 };
 
+typedef std::wstring CWord;	
+typedef std::deque<CWord> CWordList;	
+typedef std::list<int> CSquares;
+
 class CBoard
 {
 public:
 	enum state {new_board, solved, new_word};
-    typedef boost::signal<void (state)>  signal_t;
-    typedef boost::signals::connection  connection_t;
+	typedef boost::signal<void (state)>  signal_t;
+	typedef boost::signals::connection  connection_t;
 
 private:
-	 std::wstring m_letters;
-	 CWordList m_wordlist;
-	 CWordList m_user_wordlist;
-	 CDict& m_dict;
-	 int m_selection;
-	 signal_t m_sig;
+	std::wstring m_letters;
+	CWordList m_wordlist;
+	CWordList m_user_wordlist;
+	CSquares m_selection;
+	CDict& m_dict;
+	signal_t m_sig;
 
 public:
 
-	CBoard(CDict::Ptr pd) : m_dict(*pd), m_selection(-1)
+	CBoard(CDict::Ptr pd) : m_dict(*pd)
 	{
 		m_letters.resize(BoardSize);
 	}
@@ -199,7 +203,7 @@ public:
 	//}
 
 	bool Walk(int j, CDict::Ptr dict, CWordList& wordlist, 
-		CWord word=*(std::auto_ptr<CWord>(new CWord)), bool print=false)
+		CSquares word=*(std::auto_ptr<CSquares>(new CSquares)), bool print=false)
 	{
 		if (!dict) 
 			return false;
@@ -220,7 +224,7 @@ public:
 			s = Word2String(word);
 			s += L"\n";
 //			OutputDebugString(s.c_str());
-			wordlist.push_back(word);
+			wordlist.push_back(Word2String(word));
 		}
 
 		print = true;
@@ -240,18 +244,23 @@ public:
 	void SetSelection(int item)
 	{
 		ATLASSERT(item >= -1);
-		m_selection = item;
+		m_selection = item < 0 ? CSquares() : String2Word(this->m_wordlist[item]);
 	}
 
-	int GetSelection()
+	void SetSelection(const CWord& w)
 	{
-		return m_selection;
+		m_selection = String2Word(w);
 	}
 
-	std::wstring Word2String(const CWord& w) const
+	//CSquares GetSelection() const
+	//{
+	//	return m_selection;
+	//}
+
+	std::wstring Word2String(const CSquares& w) const
 	{
 		std::wstring s;
-		CWord::const_iterator i;
+		CSquares::const_iterator i;
 		for (i=w.begin(); i!=w.end(); i++)
 			s += this->m_letters[*i];
 		return s;
@@ -260,16 +269,17 @@ public:
 //	for each square on board
 //		if matches first letter in string
 //			drop first letter, test rest of string
-	CWord String2Word(const std::wstring& s) const
+	CSquares String2Word(const std::wstring& s) const
 	{
-		CWord word;
+		CSquares word;
 		for (int i=0; i<BoardSize; i++)
 		{
 			if (s[0] == m_letters[i])
 			{
-				word = CWord(i);
+				word.push_back(i);
 				if (string2word(i,s.substr(1),word))
 					break;
+				word.pop_back();
 			}
 		}
 		return word;
@@ -281,7 +291,7 @@ public:
 //				add square to CWord
 //				if no more letters, done
 //				else drop first letter and recurse
-	bool string2word(int j, const std::wstring& s, CWord& word) const
+	bool string2word(int j, const std::wstring& s, CSquares& word) const
 	{
 		CIndex index(j);
 		for (Direction dir=northwest; dir!=none; dir++)
@@ -289,11 +299,15 @@ public:
 			if (s.empty())
 				return true;
 			int i = index.GetNeighbour(dir);
+			ATLASSERT(i>=-1 && i<BoardSize);
 			if (i != -1 && s[0] == m_letters[i])
 			{
+				if (word.end() != find(word.begin(),word.end(),i))
+					continue;
 				word.push_back(i);
 				if (string2word(i,s.substr(1),word))
 					return true;
+				word.pop_back();
 			}
 		}
 		return false;
@@ -304,13 +318,13 @@ public:
 		return m_dict.Lookup(s);
 	}
 
-	int Find(const CWord& s) const
+	int Find(const std::wstring& s) const
 	{
 		int i = 0;
-		for (CWordList::const_iterator it=m_wordlist.begin(); it!=m_wordlist.end(); it++)
+		for (CWordList::const_iterator it=m_wordlist.begin(); it!=m_wordlist.end(); it++,i++)
 		{
 			if (wordEqual(s,*it))
-				return 0;
+				return i;
 		}
 		return -1;
 	}
@@ -341,37 +355,37 @@ public:
 		return m_user_wordlist;
 	}
 
-	void AddUserWord(const CWord& w)
+	void AddUserWord(const CSquares& w)
 	{
-		m_user_wordlist.push_back(w);
+		m_user_wordlist.push_back(Word2String(w));
 		m_sig(new_word);
 	}
 
 	bool IsSquareUsed(int square)
 	{
 		bool found = false;
-		if (m_selection != -1)
+		if (!m_selection.empty())
 		{
-			CWord& v = m_wordlist[m_selection];
-			CWord::iterator i = std::find(v.begin(), v.end(), square);
+			const CSquares& v = this->m_selection;
+			CSquares::const_iterator i = std::find(v.begin(), v.end(), square);
 			found = v.end() != i;
 		}
 		return found;
 	}
 
-	// Get direction to next letter in word
+	// Get direction to next letter in word (used to draw arrows)
 	Direction GetDirection(int square)
 	{
 		Direction dir = direction::none;
 		bool found = false;
-		if (m_selection != -1)
+		if (!m_selection.empty())
 		{
-			CWord& v = m_wordlist[m_selection];
-			CWord::iterator i = std::find(v.begin(), v.end(), square);
+			const CSquares& v = m_selection;
+			CSquares::const_iterator i = std::find(v.begin(), v.end(), square);
 			found = v.end() != i;
 			if (found)
 			{
-				CWord::iterator next = ++i;
+				const CSquares::const_iterator next = ++i;
 				if (next != v.end())
 				{
 					int next_square = *next;
@@ -393,12 +407,12 @@ private:
 
 	bool wordEqual( const CWord& a, const CWord& b ) const
 	{
-		return Word2String(a) == Word2String(b);
+		return a == b;
 	}
 
 	bool wordCompare( const CWord& a, const CWord& b ) const
 	{
-		return Word2String(a) < Word2String(b);
+		return a < b;
 	}
 
 };

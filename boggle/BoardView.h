@@ -91,18 +91,16 @@ class ATL_NO_VTABLE CBoardViewImpl : public CWindowImpl< T, TBase, TWinTraits >
 public:
 	CFont m_font;
 	CBoard& m_board;
-	int m_selection;			// item selected in listbox
 	CTriangleList m_triangles;
 	CRect m_rect;				// client rectangle
 	int m_mouse_square;			// square mouse is over or -1 if none
 	bool m_in_client;
-	CWord m_word;
+	CSquares m_word;
 	bool m_is_word;
 	ULONGLONG m_mouse_time;		// mouse time (system ticks) in msec
 
 	CBoardViewImpl(CBoard* pb) : m_board(*pb), 
 								 m_font(0),
-								 m_selection(-1),
 								 m_in_client(false),
 								 m_is_word(false),
 								 m_mouse_time(0)
@@ -139,10 +137,11 @@ public:
 
 	void Update(const std::wstring& s) 
 	{
-		const CWord& word(m_board.String2Word(s));
-		int i = m_board.Find(word);
-		ATLASSERT(i != -1);
-		this->Update(i);
+		m_board.SetSelection(s);
+		SetWindowTextW(m_board.Format().c_str());
+		//int i = m_board.Find(s);
+		//ATLASSERT(i != -1);
+		//this->Update(i);
 	}
 
 	// Message map and handlers
@@ -364,7 +363,7 @@ public:
 	{
 		const CRect rc = GetRect(square);
 		const UINT uFormat = DT_SINGLELINE|DT_CENTER|DT_VCENTER|DT_NOPREFIX;
-		CWord::iterator i = std::find(m_word.begin(), m_word.end(), square);
+		CSquares::iterator i = std::find(m_word.begin(), m_word.end(), square);
 		bool mouse_over = m_word.end() != i;
 		bool in_word = m_board.IsSquareUsed(square);
 		UINT button_style = DFCS_BUTTONPUSH | (in_word | mouse_over ? DFCS_CHECKED : 0);
@@ -423,7 +422,7 @@ public:
 						  CPoint(-1,1),CPoint(0,1),CPoint(1,1) };
 //		CPoint triangle[] = {CPoint(-5,-5),CPoint(0,5),CPoint(5,-5)};
 		CTriangle triangle = m_triangles[dir];
-		for (int i=0; i<triangle.size(); i++)
+		for (size_t i=0; i<triangle.size(); i++)
 		{
 			CPoint edge = edges[dir];
 			CPoint* ts = triangle;

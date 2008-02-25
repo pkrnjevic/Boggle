@@ -20,9 +20,6 @@
   #error Dict.h requires list to be included first
 #endif
 
-typedef std::list<int> CWord;
-typedef std::deque<CWord> CWordList;
-
 static const int AlphabetSize = 'z'-'a'+1;
 static const int MinWordLength = 4;
 

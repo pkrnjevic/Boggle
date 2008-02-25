@@ -229,7 +229,7 @@ public:
 	
 	LRESULT OnSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		const CWordList& wordlist = m_board.Solve();
+		m_board.Solve();
 		m_listview.Load();
 		return 0;
 	}
