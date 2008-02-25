@@ -131,10 +131,18 @@ public:
 		this->OnSize(0,size);
 	}
 
-	void Update(int item = -1)
+	void Update(int item = -1) 
 	{
 		m_board.SetSelection(item);
 		SetWindowTextW(m_board.Format().c_str());
+	}
+
+	void Update(const std::wstring& s) 
+	{
+		const CWord& word(m_board.String2Word(s));
+		int i = m_board.Find(word);
+		ATLASSERT(i != -1);
+		this->Update(i);
 	}
 
 	// Message map and handlers
@@ -212,9 +220,7 @@ public:
 		}
 		int row = point.y * BoardWidth / m_rect.Height();
 		int col = point.x * BoardWidth / m_rect.Width();
-		char s[100];
-		sprintf(s,"flags=%d,x/y=[%d,%d],row/col=[%d,%d]\n",nFlags,point.x,point.y,row,col);
-		OutputDebugStringA(s);
+		AtlTrace("flags=%d,x/y=[%d,%d],row/col=[%d,%d]\n",nFlags,point.x,point.y,row,col);
 		int square = col + row * BoardWidth;
 		if (square != m_mouse_square && nFlags & MK_LBUTTON)
 		{
@@ -249,6 +255,7 @@ public:
 
 	void OnMouseUp(UINT nFlags, CPoint point)
 	{
+		m_board.AddUserWord(m_word);
 		m_word.clear();
 		this->Invalidate();
 	}

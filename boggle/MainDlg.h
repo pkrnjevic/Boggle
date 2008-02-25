@@ -5,7 +5,9 @@
 #pragma once
 
 #include "StringUtils.h"
+#include "SimpleHtml.h"
 #include "SplitterBar.h"
+#include "WordListCtrl.h"
 
 class CMainDlg : public CDialogImpl<CMainDlg>, public CDialogResize<CMainDlg>,
 		public CUpdateUI<CMainDlg>,	public CMessageFilter, public CIdleHandler
@@ -17,11 +19,15 @@ public:
 	CFont m_font;
 	CDice m_dice;
 	CVertSplitterCtrl m_ctrlSplit;
+	CWordListCtrl m_listview;
+	CWordListCtrl::connection_t m_connection;
 
 	enum { IDD = IDD_MAINDLG };
 
 	CMainDlg() : m_board(&m_dict),
-				 m_boardview(&m_board) 
+				 m_boardview(&m_board),
+				 m_listview(&m_board),
+				 m_connection(m_listview.connect(boost::bind(&CMainDlg::OnWordListSelection, this, _1)))
 	{}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
@@ -43,7 +49,10 @@ public:
 		DLGRESIZE_CONTROL(IDC_SPLIT, DLSZ_MOVE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_LIST, DLSZ_MOVE_X|DLSZ_SIZE_Y)
 		DLGRESIZE_CONTROL(IDC_NEW, DLSZ_MOVE_Y)
-		DLGRESIZE_CONTROL(IDC_SOLVE, DLSZ_MOVE_Y)
+//		DLGRESIZE_CONTROL(IDC_SOLVE, DLSZ_MOVE_Y)
+		DLGRESIZE_CONTROL(IDC_SHOW_ME, DLSZ_MOVE_X|DLSZ_MOVE_Y)
+		DLGRESIZE_CONTROL(IDC_SHOW_OTHERS, DLSZ_MOVE_X|DLSZ_MOVE_Y)
+		DLGRESIZE_CONTROL(IDC_SHOW_ALL, DLSZ_MOVE_X|DLSZ_MOVE_Y)
 		DLGRESIZE_CONTROL(ID_APP_ABOUT, DLSZ_MOVE_X|DLSZ_MOVE_Y)
     END_DLGRESIZE_MAP()
 
@@ -55,9 +64,13 @@ public:
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
-		COMMAND_HANDLER(IDC_NEW, BN_CLICKED, OnBnClickedNew)
-		COMMAND_HANDLER(IDC_SOLVE, BN_CLICKED, OnBnClickedSolve)
+		COMMAND_ID_HANDLER(IDC_NEW, OnNew)
+		COMMAND_ID_HANDLER(IDC_SOLVE, OnSolve)
 		COMMAND_HANDLER(IDC_LIST, LBN_SELCHANGE, OnLbnSelchangeList)
+// void OnLButtonDown(UINT nFlags, CPoint point)
+		COMMAND_HANDLER(IDC_SHOW_ME, BN_CLICKED, OnBnClickedShow)
+		COMMAND_HANDLER(IDC_SHOW_OTHERS, BN_CLICKED, OnBnClickedShow)
+		COMMAND_HANDLER(IDC_SHOW_ALL, BN_CLICKED, OnBnClickedShow)
         CHAIN_MSG_MAP(CDialogResize<CMainDlg>)
 	END_MSG_MAP()
 
@@ -69,6 +82,10 @@ public:
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
 		DlgResize_Init(true, true, WS_THICKFRAME|WS_CLIPCHILDREN);
+
+//		m_listview.Attach(GetDlgItem(IDC_LIST));
+		m_listview.SubclassWindow(GetDlgItem(IDC_LIST));
+		m_listview.LimitText(100000);
 
 		m_ctrlSplit.SubclassWindow(GetDlgItem(IDC_SPLIT));
 		m_ctrlSplit.SetSplitterPanes(GetDlgItem(IDC_BOARD), GetDlgItem(IDC_LIST));
@@ -100,6 +117,10 @@ public:
 		UIAddChildWindowContainer(m_hWnd);
 
 		LoadDict();
+
+		//CButton(GetDlgItem(IDC_SHOW_ME)).SetButtonStyle(0x50031003);
+		//CButton(GetDlgItem(IDC_SHOW_OTHERS)).SetButtonStyle(0x50031003);
+		//CButton(GetDlgItem(IDC_SHOW_ALL)).SetButtonStyle(0x50031003);
 
 		CButton(GetDlgItem(IDC_NEW)).Click();
 
@@ -194,7 +215,7 @@ public:
 		return os.str();
 	}
 
-	LRESULT OnBnClickedNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	LRESULT OnNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		std::wstring s = m_dice.RollDice();
 		OutputDebugString(s.c_str());
@@ -202,22 +223,14 @@ public:
 		m_board.Load(s);
 		m_boardview.Update();
 		BOOL not_used;
-		OnBnClickedSolve(0, 0, 0, not_used);
+		OnSolve(0, 0, 0, not_used);
 		return 0;
 	}
 	
-	LRESULT OnBnClickedSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	LRESULT OnSolve(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		CEdit lb(GetDlgItem(IDC_LIST));
-		lb.Clear();
-//		while (lb.DeleteString(0) != LB_ERR && lb.GetCount())
-//			;
 		const CWordList& wordlist = m_board.Solve();
-		for (CWordList::const_iterator i=wordlist.begin(); i!=wordlist.end(); i++)
-		{
-			std::wstring s = (i == wordlist.begin() ? L"" : L", ") + m_board.Entries(*i);
-			lb.AppendText(s.c_str());
-		}
+		m_listview.Load();
 		return 0;
 	}
 		
@@ -225,8 +238,35 @@ public:
 	{
 		int i = CListBox(hWndCtl).GetCurSel();
 		m_boardview.Update(i);
-//		OutputDebugString(m_board.Entries(m_wordlist[i]).c_str());
+//		OutputDebugString(m_board.Entries(m_listview[i]).c_str());
 //		OutputDebugString(L"\n");
+		return 0;
+	}
+
+	void OnWordListSelection(const std::wstring& s) 
+	{
+		m_boardview.Update(s);
+	}
+
+	LRESULT OnBnClickedShow(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+	{
+		bHandled = false;
+		CButton b(hWndCtl);
+		UINT state = b.GetState();
+		switch (wID) {
+			case IDC_SHOW_ME:
+				m_listview.ShowMe() = state & BST_CHECKED;
+				break;
+			case IDC_SHOW_OTHERS:
+				m_listview.ShowOthers() = state & BST_CHECKED;
+				break;
+			case IDC_SHOW_ALL:
+				m_listview.ShowAll() = state & BST_CHECKED;
+				break;
+			default:
+				ATLASSERT(false);
+		};
+		m_listview.Update();
 		return 0;
 	}
 

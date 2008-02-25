@@ -2,13 +2,28 @@
 
 #define __BOARD_H__
 
-#include <boost/smart_enum.hpp>
-#include <boost/bind.hpp>
-#include <ostream>
-#include <list>
+#ifndef BOOST_SMART_ENUM_HPP_INCLUDED
+  #error Board.h requires boost/smart_enum.hpp to be included first
+#endif
 
-#define BoardWidth 5
-#define BoardSize (BoardWidth*BoardWidth)
+#ifndef BOOST_BIND_HPP_INCLUDED
+  #error Board.h requires boost/bind.hpp to be included first
+#endif
+
+#ifndef BOOST_SIGNAL_HPP
+  #error Board.h requires boost/signal to be included first
+#endif
+
+#ifndef _OSTREAM_
+  #error Board.h requires ostream to be included first
+#endif
+
+#ifndef _LIST_
+  #error Board.h requires list to be included first
+#endif
+
+static const int BoardWidth = 5;
+static const int BoardSize = BoardWidth * BoardWidth;
 
 static const int neighbour_list[8] = 
 	{-(BoardWidth+1),-BoardWidth,-(BoardWidth-1),-1,1,(BoardWidth-1),BoardWidth,(BoardWidth+1)};
@@ -79,10 +94,18 @@ private:
 
 class CBoard
 {
+public:
+	enum state {new_board, solved, new_word};
+    typedef boost::signal<void (state)>  signal_t;
+    typedef boost::signals::connection  connection_t;
+
+private:
 	 std::wstring m_letters;
 	 CWordList m_wordlist;
+	 CWordList m_user_wordlist;
 	 CDict& m_dict;
 	 int m_selection;
+	 signal_t m_sig;
 
 public:
 
@@ -95,22 +118,34 @@ public:
 	{
 	}
 
+	// NB: not entirely const: the m_sig is modified as subscribers are added
+    connection_t connect(signal_t::slot_function_type subscriber) const
+    {
+        return const_cast<CBoard*>(this)->m_sig.connect(subscriber);
+    }
+
+    void disconnect(connection_t subscriber)
+    {
+        subscriber.disconnect();
+    }
+
 	void Load(std::wstring s)
 	{
 		//std::wstring& rs = this;
 		//rs = s;
 		m_letters.assign(s);
+		m_sig(new_board);
 	}
 
-	std::wstring Entries(CWord v)
-	{
-		std::wstring s;
-		for (CWord::iterator i=v.begin(); i!=v.end(); i++)
-		{
-			s.append(1,m_letters[*i]);
-		}
-		return s;
-	}
+	//std::wstring Entries(const CWord& v)
+	//{
+	//	std::wstring s;
+	//	for (CWord::const_iterator i=v.begin(); i!=v.end(); i++)
+	//	{
+	//		s.append(1,m_letters[*i]);
+	//	}
+	//	return s;
+	//}
 	std::wstring Format(int row = -1)
 	{
 		std::wostringstream os;
@@ -213,7 +248,7 @@ public:
 		return m_selection;
 	}
 
-	std::wstring Word2String(const CWord& w)
+	std::wstring Word2String(const CWord& w) const
 	{
 		std::wstring s;
 		CWord::const_iterator i;
@@ -222,18 +257,94 @@ public:
 		return s;
 	}
 
-	bool Lookup(const std::wstring s)
+//	for each square on board
+//		if matches first letter in string
+//			drop first letter, test rest of string
+	CWord String2Word(const std::wstring& s) const
+	{
+		CWord word;
+		for (int i=0; i<BoardSize; i++)
+		{
+			if (s[0] == m_letters[i])
+			{
+				word = CWord(i);
+				if (string2word(i,s.substr(1),word))
+					break;
+			}
+		}
+		return word;
+	}
+
+//	do with rest of string
+//		for each neighbour, test if it matches first letter
+//			if so and letter hasn't been used yet
+//				add square to CWord
+//				if no more letters, done
+//				else drop first letter and recurse
+	bool string2word(int j, const std::wstring& s, CWord& word) const
+	{
+		CIndex index(j);
+		for (Direction dir=northwest; dir!=none; dir++)
+		{
+			if (s.empty())
+				return true;
+			int i = index.GetNeighbour(dir);
+			if (i != -1 && s[0] == m_letters[i])
+			{
+				word.push_back(i);
+				if (string2word(i,s.substr(1),word))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	bool Lookup(const std::wstring& s) const
 	{
 		return m_dict.Lookup(s);
 	}
 
+	int Find(const CWord& s) const
+	{
+		int i = 0;
+		for (CWordList::const_iterator it=m_wordlist.begin(); it!=m_wordlist.end(); it++)
+		{
+			if (wordEqual(s,*it))
+				return 0;
+		}
+		return -1;
+	}
+
+//	const CWordList::const_iterator& Find(const CWord& s) const
+//	{
+//		return std::find_if(m_wordlist.begin(), m_wordlist.end(), boost::bind(&CBoard::wordEqual,this,_1,s));
+//	}
+
 	const CWordList& Solve()
 	{
+	 	m_user_wordlist.clear();
 	 	m_wordlist.clear();
 		for (int i=0; i<BoardSize; i++)
 			Walk(i, &m_dict, m_wordlist);
 		std::sort(m_wordlist.begin(),m_wordlist.end(),boost::bind(&CBoard::wordCompare,this,_1,_2));
+		m_sig(solved);
 		return m_wordlist;
+	}
+
+	const CWordList& GetWordList() const
+	{
+		return m_wordlist;
+	}
+
+	const CWordList& GetUserWordList() const
+	{
+		return m_user_wordlist;
+	}
+
+	void AddUserWord(const CWord& w)
+	{
+		m_user_wordlist.push_back(w);
+		m_sig(new_word);
 	}
 
 	bool IsSquareUsed(int square)
@@ -280,7 +391,12 @@ public:
 
 private:
 
-	bool wordCompare( const CWord& a, const CWord& b )
+	bool wordEqual( const CWord& a, const CWord& b ) const
+	{
+		return Word2String(a) == Word2String(b);
+	}
+
+	bool wordCompare( const CWord& a, const CWord& b ) const
 	{
 		return Word2String(a) < Word2String(b);
 	}

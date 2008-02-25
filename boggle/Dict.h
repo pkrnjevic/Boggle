@@ -1,15 +1,30 @@
 #pragma once
 
-#include <algorithm>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <list>
+#ifndef _ALGORITHM_
+  #error Dict.h requires algorithm to be included first
+#endif
+
+#ifndef _IOSTREAM_
+  #error Dict.h requires iostream to be included first
+#endif
+
+#ifndef _FSTREAM_
+  #error Dict.h requires fstream to be included first
+#endif
+
+#ifndef _STRING_
+  #error Dict.h requires string to be included first
+#endif
+
+#ifndef _FSTREAM_
+  #error Dict.h requires list to be included first
+#endif
 
 typedef std::list<int> CWord;
 typedef std::deque<CWord> CWordList;
 
 static const int AlphabetSize = 'z'-'a'+1;
+static const int MinWordLength = 4;
 
 class CDict
 {
@@ -47,6 +62,16 @@ public:
 		}
 		while (!myfile.eof()) {
 			std::getline(myfile,line);
+			// skip very short words
+			std::string::size_type pos;
+			if (line.length() < MinWordLength)
+				continue;
+			// replace "qu" with "q" (boggle has a "qu" square)
+			else if (line.npos != (pos=line.find("qu",0)))
+				line.replace(pos,2,"q");
+			// remove words with "q" not followed by "u" (boggle rules)
+			else if (line.npos != line.find("q",0))
+				continue;
 			Insert(line.c_str());
 		}
 	}

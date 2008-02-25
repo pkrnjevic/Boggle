@@ -1,5 +1,5 @@
-#if !defined(AFX_SIMPLEHTMLCTRL_H__20020223_765E_434E_641B_0080AD509054__INCLUDED_)
-#define AFX_SIMPLEHTMLCTRL_H__20020223_765E_434E_641B_0080AD509054__INCLUDED_
+#if !defined(_SIMPLEHTMLCTRL_H_)
+#define _SIMPLEHTMLCTRL_H_
 
 #pragma once
 
@@ -686,7 +686,7 @@ public:
 // CSimpleHtmlCtrl - a subclassed RichEdit control
 
 template< class T, class TBase = CRichEditCtrl, class TWinTraits = CControlWinTraits >
-class CSimpleHtmlImpl : public CWindowImpl< T, TBase, TWinTraits >
+class CSimpleHtmlImpl : public CWindowImpl< T, TBase, TWinTraits >, public CRichEditCommands<T>
 {
 public:
    DECLARE_WND_SUPERCLASS(NULL, TBase::GetWndClassName())
@@ -823,6 +823,7 @@ public:
 
    BEGIN_MSG_MAP(CSimpleHtmlCtrl)
       MESSAGE_HANDLER(WM_CREATE, OnCreate)
+	  CHAIN_MSG_MAP_ALT(CRichEditCommands<CSimpleHtmlCtrl>, 1)
    END_MSG_MAP()
 
    LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
@@ -842,5 +843,5 @@ public:
 };
 
 
-#endif // !defined(AFX_SIMPLEHTMLCTRL_H__20020223_765E_434E_641B_0080AD509054__INCLUDED_)
+#endif // !defined(_SIMPLEHTMLCTRL_H_)
 
