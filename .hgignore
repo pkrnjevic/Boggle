@@ -1,0 +1,11 @@
+syntax: glob
+*.exe
+*.dep
+*.res
+*.cd
+*.suo
+*.user
+*.htm
+*.manifest
+*.orig
+
