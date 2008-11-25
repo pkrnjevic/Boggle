@@ -48,6 +48,54 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 16
+BEGIN
+    BUTTON      IDC_NEW
+    SEPARATOR
+    BUTTON      IDC_SHOW_ME
+    BUTTON      IDC_SHOW_ALL
+    SEPARATOR
+    BUTTON      ID_APP_ABOUT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                ID_FILE_NEW
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About Boggle...",            ID_APP_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Icon
 //
 
@@ -71,19 +119,27 @@ BEGIN
     GROUPBOX        "",IDC_STATIC,7,7,115,88
 END
 
-IDD_MAINDLG DIALOGEX 0, 0, 213, 147
-STYLE DS_SETFONT | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
-CAPTION "Boggle"
-FONT 8, "MS Sans Serif", 0, 0, 0x0
+IDD_MAINDLG DIALOGEX 0, 0, 185, 93
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS
+EXSTYLE WS_EX_CLIENTEDGE
+FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
-    PUSHBUTTON      "&About...",ID_APP_ABOUT,71,125,50,14
-    PUSHBUTTON      "New Board",IDC_NEW,7,125,50,14
+    CONTROL         "ttttt",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,24,69,24,10
+    PUSHBUTTON      "Button1",IDC_BUTTON1,56,65,50,14
+    LTEXT           "Static",IDC_STATIC,20,7,50,45
+    CONTROL         "",IDC_RICHEDIT21,"RichEdit20W",WS_BORDER | WS_TABSTOP | 0x80,113,7,65,49
+END
+
+IDD_BOGGLE_FORM DIALOGEX 0, 0, 213, 121
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
     LTEXT           "Board",IDC_BOARD,7,7,114,107,WS_BORDER
-    CONTROL         "",IDC_SPLIT,"Static",SS_LEFTNOWORDWRAP | WS_GROUP,124,7,3,107
-    CONTROL         "",IDC_LIST,"RichEdit20W",ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_BORDER | WS_VSCROLL | WS_TABSTOP,129,7,77,107
-    CONTROL         "&Me",IDC_SHOW_ME,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,149,125,19,14
-    CONTROL         "&Other",IDC_SHOW_OTHERS,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,168,125,19,14
-    CONTROL         "&All",IDC_SHOW_ALL,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,187,125,19,14
+    CONTROL         "",IDC_SPLIT,"Static",SS_LEFTNOWORDWRAP | WS_GROUP,124,7,8,107
+    CONTROL         "",IDC_LIST,"RichEdit20W",ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_BORDER | WS_VSCROLL | WS_TABSTOP,129,7,77,90
+    CONTROL         "&Me",IDC_SHOW_ME,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,149,100,19,14
+    CONTROL         "&Other",IDC_SHOW_OTHERS,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,168,100,19,14
+    CONTROL         "&All",IDC_SHOW_ALL,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,187,100,19,14
 END
 
 
@@ -103,12 +159,12 @@ BEGIN
         BOTTOMMARGIN, 95
     END
 
-    IDD_MAINDLG, DIALOG
+    IDD_BOGGLE_FORM, DIALOG
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 206
         TOPMARGIN, 7
-        BOTTOMMARGIN, 140
+        BOTTOMMARGIN, 114
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -184,6 +240,17 @@ END
 STRINGTABLE 
 BEGIN
     IDR_MAINFRAME           "boggle"
+END
+
+STRINGTABLE 
+BEGIN
+    IDC_SHOW_ME             "My words\nWords found by me"
+    IDC_SHOW_ALL            "All words\nAll possible words"
+END
+
+STRINGTABLE 
+BEGIN
+    IDC_NEW                 "New\nNew game"
 END
 
 STRINGTABLE 
